@@ -1,3 +1,4 @@
+#include "myMath.h"
 #include "tgaimage.h"
 #include <iostream>
 #include <fstream>
@@ -6,6 +7,7 @@
 #include <string>
 #include <algorithm> 
 #include <random>
+
 constexpr TGAColor white = {255,255,255,255};
 constexpr TGAColor green   = {  0, 255,   0, 255};
 constexpr TGAColor red     = {  0,   0, 255, 255};
@@ -23,10 +25,10 @@ enum class ProjectionType {
 	ORTHOGRAPHIC, // Orthographic projection 正交投影
 	PERSPECTIVE   // Perspective projection 透视投影
 };
-struct Vec3f
+struct vec3
 {
     float x, y, z;
-    Vec3f normalize() {
+    vec3 normalize() {
         float length = std::sqrt(x * x + y * y + z * z);
         if (length == 0) return { 0, 0, 0 }; // Avoid division by zero
         return { x / length, y / length, z / length };
@@ -47,8 +49,8 @@ struct Face
 };
 struct Transform
 {
-    Vec3f position;
-    Vec3f rotation; // Euler angles in radians
+    vec3 position;
+    vec3 rotation; // Euler angles in radians
 };
 
 class Camera: Transform{
@@ -58,11 +60,6 @@ public:
     
 
 };
-// math
-float cross(const Vec2f& a, const Vec2f& b) {
-    return a.x * b.y - a.y * b.x;
-}
-// tool 
 std::vector<std::string> split(const std::string& str, char delimiter){
 	std::vector<std::string> tokens;
 	std::istringstream tokenStream(str);
@@ -202,7 +199,22 @@ bool isPtsinTriangle(int ax, int ay, int bx, int by, int cx, int cy, Vec2f p) {
 	return (cross_ab_ap >= 0 && cross_bc_ap >= 0 && cross_ca_cp >= 0) ||
 		(cross_ab_ap <= 0 && cross_bc_ap <= 0 && cross_ca_cp <= 0);
 }
-void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage& framebuffer, TGAColor color) { 
+vec3 barycentric(int ax, int ay, int bx, int by, int cx, int cy, int px, int py) {
+    float denom = (float)((bx - ax) * (cy - ay) - (cx - ax) * (by - ay));
+    if (std::abs(denom) < 1e-5f) return { -1, -1, -1 }; // 面积过小或退化
+
+    float alpha = (float)((bx - px) * (cy - py) - (cx - px) * (by - py)) / denom;
+    float beta = (float)((cx - px) * (ay - py) - (ax - px) * (cy - py)) / denom;
+    float gamma = 1.0f - alpha - beta;
+
+    return { alpha, beta, gamma };
+}
+float getTriangleArea(int ax, int ay, int bx, int by, int cx, int cy) {
+	return std::abs(cross({ static_cast<float>(bx - ax), static_cast<float>(by - ay) },
+		{ static_cast<float>(cx - ax), static_cast<float>(cy - ay) })) / 2.0f;
+}
+
+void triangle(int ax, int ay, int az, int bx, int by, int bz , int cx, int cy, int cz ,TGAImage& framebuffer, TGAImage& zbuffer, TGAColor color) {
 	int bbminx = std::min({ ax, bx, cx });
 	int bbminy = std::min({ ay, by, cy });
 	int bbmaxx = std::max({ ax, bx, cx });
@@ -214,16 +226,24 @@ void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage& framebuf
 #pragma omp parallel for
     for (int x = bbminx; x <= bbmaxx; x++) {
         for (int y = bbminy; y <= bbmaxy; y++) {
-            if (isPtsinTriangle(ax, ay, bx, by, cx, cy, { static_cast<float>(x), static_cast<float>(y) })) {
-                framebuffer.set(x, y, color);
+            //if (isPtsinTriangle(ax, ay, bx, by, cx, cy, { static_cast<float>(x), static_cast<float>(y) })) {
+            //    framebuffer.set(x, y, color);
+            //}
+            vec3 bary = barycentric(ax, ay, bx, by, cx, cy, x, y);
+            if (bary.x < 0 || bary.y < 0 || bary.z < 0) { continue; }
+            unsigned char z = static_cast<unsigned char>(bary.x * az + bary.y * bz + bary.z * cz);
+            if (z <= zbuffer.get(x, y)[0]){ 
+                continue;
             }
+            framebuffer.set(x, y, color);
+			zbuffer.set(x, y, {z,z,z});
         }
     }
 }
 
 class Mesh {
 public:
-    std::vector<Vec3f> vertices;
+    std::vector<vec3> vertices;
     std::vector<Face> faces;
     float size = 1;
 	// max and min bounds for the mesh
@@ -249,7 +269,7 @@ public:
             std::string type;
             iss >> type;
             if (type == "v") {
-                Vec3f v;
+                vec3 v;
 				iss >> v.x >> v.y >> v.z;
 				
                 vertices.push_back(v);
@@ -296,32 +316,39 @@ public:
             }
         }
     }
-    void drawPreview_triangle(TGAImage& buffer) {
+    void drawPreview_triangle(TGAImage& buffer, TGAImage &zbuffer) {
         int width = buffer.width();
         int height = buffer.height();
 		// Clear the buffer  
-		
+        for (int x = 0; x < width; ++x) {
+            for (int y = 0; y < height; ++y) {
+                zbuffer.set(x, y, {0,0,0}); // 最远
+            }
+        }
         for (Face f : faces) {
             TGAColor colorchoice = randomPredefinedColor();
 			triangle(
 				static_cast<int>((vertices[f.v_idx[0]].x + 1) * width / 2),
 				static_cast<int>((vertices[f.v_idx[0]].y + 1) * height / 2),
+				static_cast<int>((vertices[f.v_idx[0]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
 				static_cast<int>((vertices[f.v_idx[1]].x + 1) * width / 2),
 				static_cast<int>((vertices[f.v_idx[1]].y + 1) * height / 2),
+				static_cast<int>((vertices[f.v_idx[1]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
 				static_cast<int>((vertices[f.v_idx[2]].x + 1) * width / 2),
 				static_cast<int>((vertices[f.v_idx[2]].y + 1) * height / 2),
-				buffer, colorchoice);
+				static_cast<int>((vertices[f.v_idx[2]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
+				buffer, zbuffer, colorchoice);
         }
     }
 
 private:
 	void updateBounds() {
 		auto [min_it_x, max_it_x] = std::minmax_element(vertices.begin(), vertices.end(),
-			[](const Vec3f& a, const Vec3f& b) { return a.x < b.x; });
+			[](const vec3& a, const vec3& b) { return a.x < b.x; });
 		auto [min_it_y, max_it_y] = std::minmax_element(vertices.begin(), vertices.end(),
-			[](const Vec3f& a, const Vec3f& b) { return a.y < b.y; });
+			[](const vec3& a, const vec3& b) { return a.y < b.y; });
 		auto [min_it_z, max_it_z] = std::minmax_element(vertices.begin(), vertices.end(),
-			[](const Vec3f& a, const Vec3f& b) { return a.z < b.z; });
+			[](const vec3& a, const vec3& b) { return a.z < b.z; });
 		min_x = min_it_x->x;
 		max_x = max_it_x->x;
 		min_y = min_it_y->y;
@@ -375,11 +402,13 @@ int main(int argc, char** argv) {
     const int height = 600;
 
 	TGAImage framebuffer(width, height, TGAImage::RGB);
+	TGAImage zBuffer(width, height, TGAImage::RGB);
+
     Mesh mesh;
     mesh.load_from_obj("C:\\Users\\Y9000P\\Desktop\\WorkingSpace\\tinyrenderer\\obj\\diablo3_pose\\diablo3_pose.obj");
-	mesh.drawPreview_triangle(framebuffer);
+	mesh.drawPreview_triangle(framebuffer, zBuffer);
 	framebuffer.write_tga_file("output3.tga");
-   
+	zBuffer.write_tga_file("zbuffer.tga");
     return 0;
 
 
