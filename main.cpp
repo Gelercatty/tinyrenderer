@@ -22,8 +22,8 @@ TGAColor randomPredefinedColor() {
     return colors[dist(gen)];
 }
 enum class ProjectionType {
-	ORTHOGRAPHIC, // Orthographic projection Õý½»Í¶Ó°
-	PERSPECTIVE   // Perspective projection Í¸ÊÓÍ¶Ó°
+	ORTHOGRAPHIC, // Orthographic projection ï¿½ï¿½ï¿½ï¿½Í¶Ó°
+	PERSPECTIVE   // Perspective projection Í¸ï¿½ï¿½Í¶Ó°
 };
 struct vec3
 {
@@ -137,17 +137,17 @@ void line(int ax, int ay, int bx, int by, TGAImage &framebuffer, TGAColor coller
 //}
 //
 //std::vector<std::pair<int, int>> getTriangleBoundle(int ax, int ay, int bx, int by, int cx, int cy) {
-//    // Step 1: ÕÒµ½ y µÄ·¶Î§
+//    // Step 1: ï¿½Òµï¿½ y ï¿½Ä·ï¿½Î§
 //    int min_y = std::min({ ay, by, cy });
 //    int max_y = std::max({ ay, by, cy });
 //
-//    // ³õÊ¼»¯±í¸ñ£¬ÏÈÓÃ¼«¶ËÖµÌî³ä
+//    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½
 //    int height = max_y - min_y + 1;
 //    std::vector<std::pair<int, int>> bounds(height, { INT_MAX, INT_MIN });
 //
-//    // Step 2: ¶¨ÒåÒ»¸ö lambda£¬ÓÃÓÚÌî³ä±ß½çÐÅÏ¢
+//    // Step 2: ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ lambdaï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½Ï¢
 //    auto scan_edge = [&](int x0, int y0, int x1, int y1) {
-//        auto pts = line_(x0, y0, x1, y1, *(TGAImage*)nullptr, white); // framebuffer Îª¿Õ£¬Ö»È¡×ø±ê
+//        auto pts = line_(x0, y0, x1, y1, *(TGAImage*)nullptr, white); // framebuffer Îªï¿½Õ£ï¿½Ö»È¡ï¿½ï¿½ï¿½ï¿½
 //
 //        for (auto& [x, y] : pts) {
 //            if (y < min_y || y > max_y) continue;
@@ -157,7 +157,7 @@ void line(int ax, int ay, int bx, int by, TGAImage &framebuffer, TGAColor coller
 //        }
 //        };
 //
-//    // Step 3: É¨ÃèÈýÌõ±ß
+//    // Step 3: É¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //    scan_edge(ax, ay, bx, by);
 //    scan_edge(bx, by, cx, cy);
 //    scan_edge(cx, cy, ax, ay);
@@ -172,7 +172,7 @@ void line(int ax, int ay, int bx, int by, TGAImage &framebuffer, TGAColor coller
 //
 //    std::vector<std::pair<int, int>> bounds = getTriangleBoundle(ax, ay, bx, by, cx, cy);
 //    for (int y = down; y <= top; y++) {
-//        if (y < 0 || y >= framebuffer.height()) continue; // È·±£ y ÔÚÓÐÐ§·¶Î§ÄÚ
+//        if (y < 0 || y >= framebuffer.height()) continue; // È·ï¿½ï¿½ y ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½Î§ï¿½ï¿½
 //        int x_start = bounds[y - down].first;
 //        int x_end = bounds[y - down].second;
 //        if (x_start < 0) x_start = 0;
@@ -201,7 +201,7 @@ bool isPtsinTriangle(int ax, int ay, int bx, int by, int cx, int cy, Vec2f p) {
 }
 vec3 barycentric(int ax, int ay, int bx, int by, int cx, int cy, int px, int py) {
     float denom = (float)((bx - ax) * (cy - ay) - (cx - ax) * (by - ay));
-    if (std::abs(denom) < 1e-5f) return { -1, -1, -1 }; // Ãæ»ý¹ýÐ¡»òÍË»¯
+    if (std::abs(denom) < 1e-5f) return { -1, -1, -1 }; // ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½Ë»ï¿½
 
     float alpha = (float)((bx - px) * (cy - py) - (cx - px) * (by - py)) / denom;
     float beta = (float)((cx - px) * (ay - py) - (ax - px) * (cy - py)) / denom;
@@ -221,8 +221,8 @@ void triangle(int ax, int ay, int az, int bx, int by, int bz , int cx, int cy, i
 	int bbmaxy = std::max({ ay, by, cy });
     float area = cross({ static_cast<float>(bx - ax), static_cast<float>(by - ay) },
                         { static_cast<float>(cx - ax), static_cast<float>(cy - ay) });
-    if (area <= 0) return;                      // ÌÞ³ý±³Ãæ
-    if (std::abs(area) < 1e-2f) return;       // Ãæ»ýÌ«Ð¡
+    if (area <= 0) return;                      // ï¿½Þ³ï¿½ï¿½ï¿½ï¿½ï¿½
+    if (std::abs(area) < 1e-2f) return;       // ï¿½ï¿½ï¿½Ì«Ð¡
 #pragma omp parallel for
     for (int x = bbminx; x <= bbmaxx; x++) {
         for (int y = bbminy; y <= bbmaxy; y++) {
@@ -322,7 +322,7 @@ public:
 		// Clear the buffer  
         for (int x = 0; x < width; ++x) {
             for (int y = 0; y < height; ++y) {
-                zbuffer.set(x, y, {0,0,0}); // ×îÔ¶
+                zbuffer.set(x, y, {0,0,0}); // ï¿½ï¿½Ô¶
             }
         }
         for (Face f : faces) {
