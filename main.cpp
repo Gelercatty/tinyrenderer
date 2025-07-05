@@ -395,7 +395,10 @@ int main(int argc, char** argv) {
 
     Mesh mesh;
     mesh.load_from_obj("C:\\Users\\Y9000P\\Desktop\\WorkingSpace\\tinyrenderer\\obj\\diablo3_pose\\diablo3_pose.obj");
-	mesh.drawPreview_triangle(framebuffer, zBuffer);
+    for (auto &vertics : mesh.vertices) {
+        vertics = rotate(vertics, { 90,0,0 });
+    }
+    mesh.drawPreview_triangle(framebuffer, zBuffer);
 	framebuffer.write_tga_file("output3.tga");
 	zBuffer.write_tga_file("zbuffer.tga");
 

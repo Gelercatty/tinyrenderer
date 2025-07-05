@@ -2,17 +2,12 @@
 #include <cmath>
 #include <cassert>
 #include <iostream>
-
-enum datatype
-{
-    Vec,
-    Mat
-};
+#include <numbers>
+#include <cmath>
 
 template<int n>
 struct vec_data {
     double data[n] = { 0 };
-	datatype type = Vec;
     double& operator[](int i) { assert(i >= 0 && i < n); return data[i]; }
     double  operator[](int i) const { assert(i >= 0 && i < n); return data[i]; }
 };
@@ -20,7 +15,6 @@ struct vec_data {
 template<>
 struct vec_data<2> {
     double x = 0, y = 0;
-    datatype type = Vec;
     double& operator[](int i) { assert(i >= 0 && i < 2); return i ? y : x; }
     double  operator[](int i) const { assert(i >= 0 && i < 2); return i ? y : x; }
 };
@@ -28,7 +22,6 @@ struct vec_data<2> {
 template<>
 struct vec_data<3> {
     double x = 0, y = 0, z = 0;
-    datatype type = Vec;
     double& operator[](int i) { assert(i >= 0 && i < 3); return i == 0 ? x : (i == 1 ? y : z); }
     double  operator[](int i) const { assert(i >= 0 && i < 3); return i == 0 ? x : (i == 1 ? y : z); }
 };
@@ -131,8 +124,23 @@ template<int m, int n>
 struct mat
 {
 	double data[m][n] = { {0} };
-	datatype type = Mat;
-	double& operator()(int i, int j) {
+	mat() = default;
+    // 初始化列表构造函数（必须加 explicit，避免模板歧义）
+    mat(std::initializer_list<std::initializer_list<double>> values) {
+        int i = 0;
+        for (auto row : values) {
+            int j = 0;
+            for (auto val : row) {
+                if (i < m && j < n) {
+                    data[i][j] = val;
+                }
+                ++j;
+            }
+            ++i;
+        }
+    }
+
+   double& operator()(int i, int j) {
 		assert(i >= 0 && i < m && j >= 0 && j < n);
 		return data[i][j];
 	}
@@ -222,4 +230,39 @@ vec<n> operator*(const vec<m>& v, const mat<m, n>& M) {
 }
 
 
+
+
+
+
+/// 旋转
+/// @param v 输入向量
+/// @param angles 沿着x, y, z轴的旋转角度,单位为度
+/// @return 旋转后的向量
+/// 旋转顺序 x y z
+vec3 rotate(const vec3& v, const vec3& angles) {
+	// Convert angles from degrees to radians
+	double rx = angles.x * std::numbers::pi / 180.0;
+	double ry = angles.y * std::numbers::pi / 180.0;
+	double rz = angles.z * std::numbers::pi / 180.0;
+	// Rotation matrices around x, y, z axes
+	mat<3, 3> Rx = {
+		{1, 0, 0},
+		{0, std::cos(rx), -std::sin(rx)},
+		{0, std::sin(rx), std::cos(rx)}
+	};
+	mat<3, 3> Ry = {
+		{std::cos(ry), 0, std::sin(ry)},
+		{   0,         1,       0    },
+		{-std::sin(ry), 0, std::cos(ry)}
+	};
+	mat<3, 3> Rz = {
+		{std::cos(rz), -std::sin(rz), 0},
+		{std::sin(rz), std::cos(rz), 0},
+		{0, 0, 1}
+	};
+	// Combined rotation matrix
+	mat<3, 3> R = Rx * Ry * Rz;
+	// Rotate the vector
+	return R * v;
+}
 
