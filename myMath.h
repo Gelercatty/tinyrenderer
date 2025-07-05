@@ -3,124 +3,16 @@
 #include <cassert>
 #include <iostream>
 
+enum datatype
+{
+    Vec,
+    Mat
+};
 
-//#pragma once
-//#include <cmath>
-//#include <cassert>
-//#include <iostream>
-//
-//// 多纬度向量类， 支持2，3，4 通过.h和运算符重载
-//template<int n> 
-//struct vec_data {
-//    double data[n] = { 0 };
-//    vec(std::initializer_list<double> init) {
-//        assert(init.size() == n);
-//        int i = 0;
-//        for (auto val : init) {
-//            data[i++] = val;
-//        }
-//    }
-//    double& operator[](const int i) { assert(i >= 0 && i < n); return data[i]; }
-//    double  operator[](const int i) const { assert(i >= 0 && i < n); return data[i]; }
-//};
-//template<> 
-//struct vec_data<2> {
-//    double x = 0, y = 0;
-//    double& operator[](const int i) { assert(i >= 0 && i < 2); return i ? y : x; }
-//    double  operator[](const int i) const { assert(i >= 0 && i < 2); return i ? y : x; };
-//};
-//
-//
-//template<>
-//struct vec_data<3> {
-//    double x = 0, y = 0, z = 0;
-//    double& operator[](const int i) { assert(i >= 0 && i < 3); return i ? (1 == i ? y : z) : x; }
-//    double  operator[](const int i) const { assert(i >= 0 && i < 3); return i ? (1 == i ? y : z) : x; }
-//};
-//template<>
-//struct vec_data<4>{
-//    double x = 0, y = 0, z = 0, w = 1;
-//    double& operator[](const int i) { assert(i >= 0 && i < 4); return i ? (2 == i ? z : (3 == i ? w : y)) : x; }
-//    double  operator[](const int i) const { assert(i >= 0 && i < 4); return i ? (2 == i ? z : (3 == i ? w : y)) : x; }
-//};
-//template<int n>
-//struct vec : public vec_data<n>{
-//    // 长度
-//    double length() const {
-//        double sum = 0;
-//        for (int i = 0; i < n; ++i) sum += (*this)[i] * (*this)[i];
-//        return std::sqrt(sum);
-//    }
-//
-//    // 归一化
-//    vec<n>& normalize() {
-//        double l = length();
-//        if (l == 0) return *this;
-//        for (int i = 0; i < n; ++i) (*this)[i] /= l;
-//        return *this;
-//    }
-//
-//    // 点积
-//    double dot(const vec<n>& other) const {
-//        double sum = 0;
-//        for (int i = 0; i < n; ++i) sum += (*this)[i] * other[i];
-//        return sum;
-//    }
-//
-//    // 加法
-//    vec<n> operator+(const vec<n>& other) const {
-//        vec<n> result;
-//        for (int i = 0; i < n; ++i) result[i] = (*this)[i] + other[i];
-//        return result;
-//    }
-//
-//    // 减法
-//    vec<n> operator-(const vec<n>& other) const {
-//        vec<n> result;
-//        for (int i = 0; i < n; ++i) result[i] = (*this)[i] - other[i];
-//        return result;
-//    }
-//
-//    // 数乘
-//    vec<n> operator*(double scalar) const {
-//        vec<n> result;
-//        for (int i = 0; i < n; ++i) result[i] = (*this)[i] * scalar;
-//        return result;
-//    }
-//};
-//
-//template<int n>
-//std::ostream& operator<<(std::ostream& out, const vec<n>& v) {
-//    for (int i = 0; i < n; i++) out << v[i] << " ";
-//    return out;
-//}
-//
-//typedef vec<2> vec2;
-//typedef vec<3> vec3;
-//typedef vec<4> vec4;
-//
-//double cross(const vec2& a, const vec2& b) {
-//    return      a.x * b.y - a.y * b.x;
-//}
-//vec3 cross(const vec3& a, const vec3& b) {
-//    return vec3(a.y * b.z - a.z * b.y, 
-//                a.z * b.x - a.x * b.z, 
-//                a.x * b.y - a.y * b.x);
-//}
-//
-//
-//
-//
-//
-
-
-
-//
-// 1. vec_data 特化结构：只负责存储和 [] 访问
-//
 template<int n>
 struct vec_data {
     double data[n] = { 0 };
+	datatype type = Vec;
     double& operator[](int i) { assert(i >= 0 && i < n); return data[i]; }
     double  operator[](int i) const { assert(i >= 0 && i < n); return data[i]; }
 };
@@ -128,6 +20,7 @@ struct vec_data {
 template<>
 struct vec_data<2> {
     double x = 0, y = 0;
+    datatype type = Vec;
     double& operator[](int i) { assert(i >= 0 && i < 2); return i ? y : x; }
     double  operator[](int i) const { assert(i >= 0 && i < 2); return i ? y : x; }
 };
@@ -135,13 +28,11 @@ struct vec_data<2> {
 template<>
 struct vec_data<3> {
     double x = 0, y = 0, z = 0;
+    datatype type = Vec;
     double& operator[](int i) { assert(i >= 0 && i < 3); return i == 0 ? x : (i == 1 ? y : z); }
     double  operator[](int i) const { assert(i >= 0 && i < 3); return i == 0 ? x : (i == 1 ? y : z); }
 };
 
-//
-// 2. 通用功能基类（使用 CRTP 实现）
-//
 template<int n, typename Derived>
 struct vec_base : public vec_data<n> {
     double length() const {
@@ -189,24 +80,34 @@ struct vec : public vec_base<n, vec<n>> {
 
 };
 
-// 4. 特化构造函数只为 vec<2> / vec<3> 添加
 template<>
 struct vec<2> : public vec_base<2, vec<2>> {
     vec() = default;
     vec(double x_, double y_) { x = x_; y = y_; }
+	vec(int x_, int y_) {
+		this->x = static_cast<double>(x_);
+		this->y = static_cast<double>(y_);
+	}
 };
 
 template<>
 struct vec<3> : public vec_base<3, vec<3>> {
     vec() = default;
     vec(double x_, double y_, double z_) { x = x_; y = y_; z = z_; }
+	vec(int x_, int y_, int z_) {
+		this->x = static_cast<double>(x_);
+		this->y = static_cast<double>(y_);
+		this->z = static_cast<double>(z_);
+	}
 };
 
 
 
 template<int n>
 std::ostream& operator<<(std::ostream& os, const vec<n>& v) {
+	os << "[";
     for (int i = 0; i < n; ++i) os << v[i] << " ";
+	os << "]";
     return os;
 }
 using vec2 = vec<2>;
@@ -224,3 +125,101 @@ inline vec3 cross(const vec3& a, const vec3& b) {
 inline double cross(const vec2& a, const vec2& b) {
     return a.x * b.y - a.y * b.x;
 }
+
+// Matrix
+template<int m, int n> 
+struct mat
+{
+	double data[m][n] = { {0} };
+	datatype type = Mat;
+	double& operator()(int i, int j) {
+		assert(i >= 0 && i < m && j >= 0 && j < n);
+		return data[i][j];
+	}
+	const double& operator()(int i, int j) const {
+		assert(i >= 0 && i < m && j >= 0 && j < n);
+		return data[i][j];
+	}
+    vec2 shape() {
+        return vec2{ static_cast<double>(m), static_cast<double>(n) };
+    };
+	std::pair<int, int> shape() const {
+		return { m, n };
+	}
+};
+
+template<int m, int k, int n>
+mat<m, n> operator*(const mat<m, k>& A, const mat<k, n>& B) {
+    mat<m, n> res;
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j) {
+            res(i, j) = 0;
+            for (int t = 0; t < k; ++t) {
+                res(i, j) += A(i, t) * B(t, j);
+            }
+        } 
+    }
+    return res;
+}
+
+template<int n>
+mat<n, 1> to_col_matrix(const vec<n>& v) {
+    mat<n, 1> m;
+    for (int i = 0; i < n; ++i) {
+        m(i, 0) = v[i];
+    }
+    return m;
+}
+
+template<int n>
+mat<1, n> to_row_matrix(const vec<n>& v) {
+    mat<1, n> m;
+    for (int i = 0; i < n; ++i) {
+        m(0, i) = v[i];
+    }
+    return m;
+}
+
+template<int n>
+vec<n> to_vec(const mat<n, 1>& m) {
+    vec<n> v;
+    for (int i = 0; i < n; ++i) {
+        v[i] = m(i, 0);
+    }
+    return v;
+}
+
+template<int n>
+vec<n> to_vec(const mat<1, n>& m) {
+    vec<n> v;
+    for (int i = 0; i < n; ++i) {
+        v[i] = m(0, i);
+    }
+    return v;
+}
+
+template<int m, int n>
+vec<m> operator*(const mat<m, n>& M, const vec<n>& v) {
+    vec<m> result;
+    for (int i = 0; i < m; ++i) {
+        result[i] = 0;
+        for (int j = 0; j < n; ++j) {
+            result[i] += M(i, j) * v[j];
+        }
+    }
+    return result;
+}
+template<int m, int n>
+vec<n> operator*(const vec<m>& v, const mat<m, n>& M) {
+    vec<n> result;
+    for (int j = 0; j < n; ++j) {
+        result[j] = 0;
+        for (int i = 0; i < m; ++i) {
+            result[j] += v[i] * M(i, j);
+        }
+    }
+    return result;
+}
+
+
+
