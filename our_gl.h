@@ -1,4 +1,4 @@
-#include "tgaimage.h"
+#include "utils/tgaimage.h"
 #include "geometry.h"
 
 void viewport(const int x, const int y, const int w, const int h);

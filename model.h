@@ -1,5 +1,5 @@
 #include "geometry.h"
-#include "tgaimage.h"
+#include "utils/tgaimage.h"
 
 class Model {
     std::vector<vec3> verts = {};    // array of vertices        ┐ generally speaking, these arrays

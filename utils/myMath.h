@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <cmath>
 #include <cassert>
 #include <iostream>
@@ -65,6 +65,13 @@ struct vec_base : public vec_data<n> {
         for (int i = 0; i < n; ++i) res[i] = (*this)[i] * s;
         return res;
     }
+
+	Derived operator/(double s) const {
+		assert(s != 0); // Avoid division by zero
+		Derived res;
+		for (int i = 0; i < n; ++i) res[i] = (*this)[i] / s;
+		return res;
+	}
 };
 
 
@@ -125,7 +132,7 @@ struct mat
 {
 	double data[m][n] = { {0} };
 	mat() = default;
-    // ³õÊ¼»¯ÁÐ±í¹¹Ôìº¯Êý£¨±ØÐë¼Ó explicit£¬±ÜÃâÄ£°åÆçÒå£©
+    // åˆå§‹åŒ–åˆ—è¡¨æž„é€ å‡½æ•°ï¼ˆå¿…é¡»åŠ  explicitï¼Œé¿å…æ¨¡æ¿æ­§ä¹‰ï¼‰
     mat(std::initializer_list<std::initializer_list<double>> values) {
         int i = 0;
         for (auto row : values) {
@@ -234,11 +241,11 @@ vec<n> operator*(const vec<m>& v, const mat<m, n>& M) {
 
 
 
-/// Ðý×ª
-/// @param v ÊäÈëÏòÁ¿
-/// @param angles ÑØ×Åx, y, zÖáµÄÐý×ª½Ç¶È,µ¥Î»Îª¶È
-/// @return Ðý×ªºóµÄÏòÁ¿
-/// Ðý×ªË³Ðò x y z
+/// æ—‹è½¬
+/// @param v è¾“å…¥å‘é‡
+/// @param angles æ²¿ç€x, y, zè½´çš„æ—‹è½¬è§’åº¦,å•ä½ä¸ºåº¦
+/// @return æ—‹è½¬åŽçš„å‘é‡
+/// æ—‹è½¬é¡ºåº x y z
 vec3 rotate(const vec3& v, const vec3& angles) {
 	// Convert angles from degrees to radians
 	double rx = angles.x * std::numbers::pi / 180.0;
@@ -266,3 +273,40 @@ vec3 rotate(const vec3& v, const vec3& angles) {
 	return R * v;
 }
 
+
+
+
+
+
+
+// äºŒç»´ä¸€ä¸ªç‚¹ï¼Œæ˜¯å¦åœ¨ä¸‰è§’å½¢å†…
+bool isPtsinTriangle(int ax, int ay, int bx, int by, int cx, int cy, vec2 p) {
+    vec2 ab = { bx - ax, by - ay };
+    vec2 bc = { cx - bx, cy - by };
+    vec2 ca = { ax - cx, ay - cy };
+
+    vec2 ap = { p.x - ax, p.y - ay };
+    vec2 bp = { p.x - bx, p.y - by };
+    vec2 cp = { p.x - cx, p.y - cy };
+
+    float cross_ab_ap = cross(ab, ap);
+    float cross_bc_ap = cross(bc, bp);
+    float cross_ca_cp = cross(ca, cp);
+
+    return (cross_ab_ap >= 0 && cross_bc_ap >= 0 && cross_ca_cp >= 0) ||
+        (cross_ab_ap <= 0 && cross_bc_ap <= 0 && cross_ca_cp <= 0);
+}
+vec3 barycentric(int ax, int ay, int bx, int by, int cx, int cy, int px, int py) {
+    float denom = (float)((bx - ax) * (cy - ay) - (cx - ax) * (by - ay));
+    if (std::abs(denom) < 1e-5f) return { -1, -1, -1 }; // ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½Ë»ï¿½
+
+    float alpha = (float)((bx - px) * (cy - py) - (cx - px) * (by - py)) / denom;
+    float beta = (float)((cx - px) * (ay - py) - (ax - px) * (cy - py)) / denom;
+    float gamma = 1.0f - alpha - beta;
+
+    return { alpha, beta, gamma };
+}
+float getTriangleArea(int ax, int ay, int bx, int by, int cx, int cy) {
+    return std::abs(cross({ static_cast<float>(bx - ax), static_cast<float>(by - ay) },
+        { static_cast<float>(cx - ax), static_cast<float>(cy - ay) })) / 2.0f;
+}

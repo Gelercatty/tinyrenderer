@@ -1,5 +1,6 @@
-#include "myMath.h"
-#include "tgaimage.h"
+#include "utils/myMath.h"
+#include "utils/tgaimage.h"
+#include "base/Transform.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -21,27 +22,11 @@ TGAColor randomPredefinedColor() {
     std::uniform_int_distribution<int> dist(0, colors.size() - 1);
     return colors[dist(gen)];
 }
-enum class ProjectionType {
-	ORTHOGRAPHIC, // Orthographic projection ����ͶӰ
-	PERSPECTIVE   // Perspective projection ͸��ͶӰ
-};
+
 
 struct Face
 {
     std::vector<int> v_idx;
-};
-struct Transform
-{
-    vec3 position;
-    vec3 rotation; // Euler angles in radians
-};
-
-class Camera: Transform{
-public:
-	ProjectionType projection_type = ProjectionType::ORTHOGRAPHIC;     
-    
-    
-
 };
 std::vector<std::string> split(const std::string& str, char delimiter){
 	std::vector<std::string> tokens;
@@ -52,16 +37,6 @@ std::vector<std::string> split(const std::string& str, char delimiter){
 	}
 	return tokens;
 }
-/// <summary>
-/// drawa line between two points (ax, ay) and (bx, by) in the framebuffer.
-/// </summary>
-/// <param name="ax"></param>
-/// <param name="ay"></param>
-/// <param name="bx"></param>
-/// <param name="by"></param>
-/// <param name="framebuffer"></param>
-/// <param name="coller"></param>
-
 void line(int ax, int ay, int bx, int by, TGAImage &framebuffer, TGAColor coller){
     bool steep = std::abs(ax-bx) < std::abs(ay-by);
     if(steep){
@@ -88,114 +63,7 @@ void line(int ax, int ay, int bx, int by, TGAImage &framebuffer, TGAColor coller
     }
 }
 
-//std::vector<std::pair<int,int>> line_(int ax, int ay, int bx, int by, TGAImage& framebuffer, TGAColor coller) {
-//    bool steep = std::abs(ax - bx) < std::abs(ay - by);
-//    if (steep) {
-//        std::swap(ax, ay);
-//        std::swap(bx, by);
-//    }
-//    if (ax > bx) {
-//        std::swap(ax, bx);
-//        std::swap(ay, by);
-//    }
-//    float y = ay;
-//    float ierror = 0;
-//	std::vector<std::pair<int, int>> points;
-//    for (int x = ax; x <= bx; x++) {
-//        if (steep) {
-//            //framebuffer.set(y, x, coller);
-//			points.emplace_back(y, x);
-//        }
-//        else {
-//            //framebuffer.set(x, y, coller);
-//			points.emplace_back(x, y);
-//        }
-//        ierror += 2 * std::abs(by - ay);
-//        if (ierror > bx - ax) {
-//            y += by > ay ? 1 : -1;
-//            ierror -= 2 * (bx - ax);
-//        }
-//    }
-//	return points;
-//}
-//
-//std::vector<std::pair<int, int>> getTriangleBoundle(int ax, int ay, int bx, int by, int cx, int cy) {
-//    // Step 1: �ҵ� y �ķ�Χ
-//    int min_y = std::min({ ay, by, cy });
-//    int max_y = std::max({ ay, by, cy });
-//
-//    // ��ʼ���������ü���ֵ���
-//    int height = max_y - min_y + 1;
-//    std::vector<std::pair<int, int>> bounds(height, { INT_MAX, INT_MIN });
-//
-//    // Step 2: ����һ�� lambda���������߽���Ϣ
-//    auto scan_edge = [&](int x0, int y0, int x1, int y1) {
-//        auto pts = line_(x0, y0, x1, y1, *(TGAImage*)nullptr, white); // framebuffer Ϊ�գ�ֻȡ����
-//
-//        for (auto& [x, y] : pts) {
-//            if (y < min_y || y > max_y) continue;
-//            int idx = y - min_y;
-//            bounds[idx].first = std::min(bounds[idx].first, x);
-//            bounds[idx].second = std::max(bounds[idx].second, x);
-//        }
-//        };
-//
-//    // Step 3: ɨ��������
-//    scan_edge(ax, ay, bx, by);
-//    scan_edge(bx, by, cx, cy);
-//    scan_edge(cx, cy, ax, ay);
-//
-//    return bounds;
-//}
-//
-//
-//void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage& framebuffer, TGAColor color) {
-//    int top = std::max(std::max(ay, by), cy);
-//    int down = std::min(std::min(ay, by), cy);
-//
-//    std::vector<std::pair<int, int>> bounds = getTriangleBoundle(ax, ay, bx, by, cx, cy);
-//    for (int y = down; y <= top; y++) {
-//        if (y < 0 || y >= framebuffer.height()) continue; // ȷ�� y ����Ч��Χ��
-//        int x_start = bounds[y - down].first;
-//        int x_end = bounds[y - down].second;
-//        if (x_start < 0) x_start = 0;
-//        if (x_end >= framebuffer.width()) x_end = framebuffer.width() - 1;
-//        for (int x = x_start; x <= x_end; x++) {
-//            framebuffer.set(x, y, color);
-//        }
-//    }
-//}
-// 二维一个点，是否在三角形内
-bool isPtsinTriangle(int ax, int ay, int bx, int by, int cx, int cy, vec2 p) {
-	vec2 ab = { bx - ax, by - ay };
-	vec2 bc = { cx - bx, cy - by };
-    vec2 ca = { ax - cx, ay - cy };
 
-	vec2 ap = { p.x - ax, p.y - ay };
-	vec2 bp = { p.x - bx, p.y - by };
-	vec2 cp = { p.x - cx, p.y - cy };
-
-	float cross_ab_ap = cross(ab, ap);
-	float cross_bc_ap = cross(bc, bp);
-	float cross_ca_cp = cross(ca, cp);
-
-	return (cross_ab_ap >= 0 && cross_bc_ap >= 0 && cross_ca_cp >= 0) ||
-		   (cross_ab_ap <= 0 && cross_bc_ap <= 0 && cross_ca_cp <= 0);
-}
-vec3 barycentric(int ax, int ay, int bx, int by, int cx, int cy, int px, int py) {
-    float denom = (float)((bx - ax) * (cy - ay) - (cx - ax) * (by - ay));
-    if (std::abs(denom) < 1e-5f) return { -1, -1, -1 }; // �����С���˻�
-
-    float alpha = (float)((bx - px) * (cy - py) - (cx - px) * (by - py)) / denom;
-    float beta = (float)((cx - px) * (ay - py) - (ax - px) * (cy - py)) / denom;
-    float gamma = 1.0f - alpha - beta;
-
-    return { alpha, beta, gamma };
-}
-float getTriangleArea(int ax, int ay, int bx, int by, int cx, int cy) {
-	return std::abs(cross({ static_cast<float>(bx - ax), static_cast<float>(by - ay) },
-		{ static_cast<float>(cx - ax), static_cast<float>(cy - ay) })) / 2.0f;
-}
 
 void triangle(int ax, int ay, int az, int bx, int by, int bz , int cx, int cy, int cz ,TGAImage& framebuffer, TGAImage& zbuffer, TGAColor color) {
 	int bbminx = std::min({ ax, bx, cx });
@@ -209,9 +77,6 @@ void triangle(int ax, int ay, int az, int bx, int by, int bz , int cx, int cy, i
 #pragma omp parallel for
     for (int x = bbminx; x <= bbmaxx; x++) {
         for (int y = bbminy; y <= bbmaxy; y++) {
-            //if (isPtsinTriangle(ax, ay, bx, by, cx, cy, { static_cast<float>(x), static_cast<float>(y) })) {
-            //    framebuffer.set(x, y, color);
-            //}
             vec3 bary = barycentric(ax, ay, bx, by, cx, cy, x, y);
             if (bary.x < 0 || bary.y < 0 || bary.z < 0) { continue; }
             unsigned char z = static_cast<unsigned char>(bary.x * az + bary.y * bz + bary.z * cz);
@@ -224,11 +89,10 @@ void triangle(int ax, int ay, int az, int bx, int by, int bz , int cx, int cy, i
     }
 }
 
-//vec3 rot(vec3 v) {
-//    constexpr double a = std::numbers::pi / 6;
-//    constexpr mat<3, 3> 
-//}
-
+vec3 persp(vec3 v) {
+    constexpr double c = 3.;
+    return v / (1 - v.z / c);
+}
 
 class Mesh {
 public:
@@ -316,17 +180,38 @@ public:
         }
         for (Face f : faces) {
             TGAColor colorchoice = randomPredefinedColor();
-			triangle(
-				static_cast<int>((vertices[f.v_idx[0]].x + 1) * width / 2),
-				static_cast<int>((vertices[f.v_idx[0]].y + 1) * height / 2),
-				static_cast<int>((vertices[f.v_idx[0]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
-				static_cast<int>((vertices[f.v_idx[1]].x + 1) * width / 2),
-				static_cast<int>((vertices[f.v_idx[1]].y + 1) * height / 2),
-				static_cast<int>((vertices[f.v_idx[1]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
-				static_cast<int>((vertices[f.v_idx[2]].x + 1) * width / 2),
-				static_cast<int>((vertices[f.v_idx[2]].y + 1) * height / 2),
-				static_cast<int>((vertices[f.v_idx[2]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
+
+// fake objection
+			vec3 v0 = persp(vertices[f.v_idx[0]]);
+			vec3 v1 = persp(vertices[f.v_idx[1]]);
+			vec3 v2 = persp(vertices[f.v_idx[2]]);
+			//vec3 v0 = vertices[f.v_idx[0]];
+			//vec3 v1 = vertices[f.v_idx[1]];
+			//vec3 v2 = vertices[f.v_idx[2]];
+            triangle(
+				static_cast<int>((v0.x + 1) * width / 2),
+				static_cast<int>((v0.y + 1) * height / 2),
+				static_cast<int>((v0.z + 1) * 255 / 2), // Assuming z is in range [0, 1]
+				static_cast<int>((v1.x + 1) * width / 2),
+				static_cast<int>((v1.y + 1) * height / 2),
+				static_cast<int>((v1.z + 1) * 255 / 2), // Assuming z is in range [0, 1]
+				static_cast<int>((v2.x + 1) * width / 2),
+				static_cast<int>((v2.y + 1) * height / 2),
+				static_cast<int>((v2.z + 1) * 255 / 2), // Assuming z is in range [0, 1]
 				buffer, zbuffer, colorchoice);
+
+
+			//triangle(
+			//	static_cast<int>((vertices[f.v_idx[0]].x + 1) * width / 2),
+			//	static_cast<int>((vertices[f.v_idx[0]].y + 1) * height / 2),
+			//	static_cast<int>((vertices[f.v_idx[0]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
+			//	static_cast<int>((vertices[f.v_idx[1]].x + 1) * width / 2),
+			//	static_cast<int>((vertices[f.v_idx[1]].y + 1) * height / 2),
+			//	static_cast<int>((vertices[f.v_idx[1]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
+			//	static_cast<int>((vertices[f.v_idx[2]].x + 1) * width / 2),
+			//	static_cast<int>((vertices[f.v_idx[2]].y + 1) * height / 2),
+			//	static_cast<int>((vertices[f.v_idx[2]].z + 1) * 255 / 2), // Assuming z is in range [0, 1]
+			//	buffer, zbuffer, colorchoice);
         }
     }
 
@@ -357,33 +242,6 @@ public:
 	BaseActor() : transform({ {0, 0, 0}, {0, 0, 0} }) {}
 };
 
-class Cube : public BaseActor, public Mesh {
-public:
-    Cube() {
-        // Initialize the cube with a default size and position
-        transform.position = { 0, 0, 0 };
-        transform.rotation = { 0, 0, 0 };
-        vertices = {
-        {-0.5f, -0.5f, -0.5f}, // 0
-        { 0.5f, -0.5f, -0.5f}, // 1
-        { 0.5f,  0.5f, -0.5f}, // 2
-        {-0.5f,  0.5f, -0.5f}, // 3
-        {-0.5f, -0.5f,  0.5f}, // 4
-        { 0.5f, -0.5f,  0.5f}, // 5
-        { 0.5f,  0.5f,  0.5f}, // 6
-        {-0.5f,  0.5f,  0.5f}  // 7
-        };
-		faces = {
-			{{0, 1, 2, 3}}, // front face
-			{{4, 5, 6, 7}}, // back face
-			{{0, 1, 5, 4}}, // bottom face
-			{{2, 3, 7, 6}}, // top face
-			{{0, 3, 7, 4}}, // left face
-			{{1, 2, 6, 5}}  // right face
-		};
-    }
-
-};
 
 int main(int argc, char** argv) {
 
@@ -395,8 +253,9 @@ int main(int argc, char** argv) {
 
     Mesh mesh;
     mesh.load_from_obj("C:\\Users\\Y9000P\\Desktop\\WorkingSpace\\tinyrenderer\\obj\\diablo3_pose\\diablo3_pose.obj");
-    for (auto &vertics : mesh.vertices) {
-        vertics = rotate(vertics, { 90,0,0 });
+
+    for (auto& v : mesh.vertices) {
+        v = rotate(v, { 70,0,0 });
     }
     mesh.drawPreview_triangle(framebuffer, zBuffer);
 	framebuffer.write_tga_file("output3.tga");
