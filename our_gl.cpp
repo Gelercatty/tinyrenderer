@@ -1,5 +1,5 @@
+#pragma once
 #include "our_gl.h"
-#include "utils/tgaimage.h"
 mat<4,4> ModelView;
 mat<4,4> Viewport;
 mat<4,4> Projection;

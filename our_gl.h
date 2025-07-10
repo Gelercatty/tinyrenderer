@@ -1,5 +1,6 @@
+#pragma once
 #include "utils/tgaimage.h"
-#include "geometry.h"
+#include "utils/geometry.h"
 
 void viewport(const int x, const int y, const int w, const int h);
 void projection(const double coeff=0); // coeff = -1/c

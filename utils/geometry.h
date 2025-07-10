@@ -2,7 +2,9 @@
 #include <cmath>
 #include <cassert>
 #include <iostream>
-
+#ifndef M_PI_2
+#define M_PI_2 1.5707963267948966
+#endif
 template<int n> struct vec {
     double data[n] = {0};
     double& operator[](const int i)       { assert(i>=0 && i<n); return data[i]; }
@@ -49,12 +51,17 @@ template<int n> std::ostream& operator<<(std::ostream& out, const vec<n>& v) {
 }
 
 template<> struct vec<2> {
+	vec<2>(double x, double y) : x(x), y(y) {}
+	vec<2>(int    x, int    y) : x(static_cast<double>(x)), y(static_cast<double>(y)) {}
+	vec<2>() : x(0), y(0) {}
     double x = 0, y = 0;
     double& operator[](const int i)       { assert(i>=0 && i<2); return i ? y : x; }
     double  operator[](const int i) const { assert(i>=0 && i<2); return i ? y : x; }
 };
 
 template<> struct vec<3> {
+	vec<3>(double x, double y, double z) : x(x), y(y), z(z) {}
+	vec<3>() : x(0), y(0), z(0) {}
     double x = 0, y = 0, z = 0;
     double& operator[](const int i)       { assert(i>=0 && i<3); return i ? (1==i ? y : z) : x; }
     double  operator[](const int i) const { assert(i>=0 && i<3); return i ? (1==i ? y : z) : x; }
@@ -82,6 +89,9 @@ template<int n> vec<n> normalized(const vec<n>& v) {
 
 inline vec3 cross(const vec3 &v1, const vec3 &v2) {
     return {v1.y*v2.z - v1.z*v2.y, v1.z*v2.x - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x};
+}
+inline float cross(const vec2& v1, const vec2& v2) {
+	return v1.x * v2.y - v1.y * v2.x;
 }
 
 template<int n> struct dt;
@@ -184,4 +194,72 @@ template<> struct dt<1> {   // template specialization to stop the recursion
         return src[0][0];
     }
 };
+
+/// <summary>
+/// 旋转角度到欧拉角旋转矩阵
+/// 
+/// </summary>
+/// <param name="rotation"></param>
+/// <returns></returns>
+inline mat<4, 4> rot2Eular_xyz(const vec3& rotation) {
+    double cx = std::cos(rotation.x), sx = std::sin(rotation.x);
+    double cy = std::cos(rotation.y), sy = std::sin(rotation.y);
+    double cz = std::cos(rotation.z), sz = std::sin(rotation.z);
+    
+    mat<4, 4> Rx = { {
+        {  1, 0, 0, 0 },
+        { 0, cx, -sx, 0 },
+        { 0, sx, cx, 0 },
+        { 0, 0, 0, 1 } 
+        } };
+    mat<4, 4> Ry = { {
+        {cy, 0, sy, 0},
+		{ 0, 1, 0, 0 },
+		{-sy, 0, cy, 0},
+		{ 0, 0, 0, 1 }
+		} };
+    mat<4, 4> Rz = { {
+        { cz, -sz, 0, 0 },
+        { sz, cz, 0, 0 },
+        { 0, 0, 1, 0 },
+        { 0, 0, 0, 1 }
+    } };
+	return Rz * Ry * Rx; 
+}
+
+
+
+
+
+
+
+
+/////////// function ////////////////
+
+/// <summary>
+/// 二维平面，p在三角形的重心坐标
+/// </summary>
+/// <returns></returns>
+vec3 barycentric(const vec2& a, const vec2& b, const vec2& c, const vec2& p);
+vec3 barycentric(int ax, int ay, int bx, int by, int cx, int cy, int px, int py);
+
+
+inline vec3 Eular_xyz_from_rot(const mat<4, 4>& R) {
+    vec3 rotation;
+
+    if (std::abs(R[2][0]) < 1.0 - 1e-6) {
+        // 非万向锁（奇异）情况
+        rotation.y = std::asin(-R[2][0]);                      // 绕 Y（Pitch）
+        rotation.x = std::atan2(R[2][1], R[2][2]);             // 绕 X（Yaw）
+        rotation.z = std::atan2(R[1][0], R[0][0]);             // 绕 Z（Roll）
+    }
+    else {
+        // 万向锁情况（pitch ≈ ±90°）
+        rotation.y = R[2][0] > 0 ? -M_PI_2 : M_PI_2;
+        rotation.x = 0;
+        rotation.z = std::atan2(-R[0][1], R[1][1]);
+    }
+
+    return rotation;
+}
 
