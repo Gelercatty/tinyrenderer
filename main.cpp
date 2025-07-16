@@ -110,8 +110,8 @@ inline vec3 ndcToScreen(const vec3& ndc, int width, int height) {
     return {
         (ndc.x + 1.0f) * 0.5f * width,
         (ndc.y + 1.0f) * 0.5f * height, // Y轴反向
-        ndc.z
-    };
+        (ndc.z + 1.0f) * 0.5f 
+	};
 }
 /////////////////////
 void triangle(int ax, int ay, float az, int bx, int by, float bz, int cx, int cy, float cz, std::vector<float>& zbuffer, TGAImage& framebuffer, TGAColor color) {
@@ -125,13 +125,24 @@ void triangle(int ax, int ay, float az, int bx, int by, float bz, int cx, int cy
 #pragma omp parallel for
     for (int x = bbminx; x <= bbmaxx; x++) {
         for (int y = bbminy; y <= bbmaxy; y++) {
+            
             vec3 bary = barycentric(ax, ay, bx, by, cx, cy, x, y);
             if (bary.x < 0 || bary.y < 0 || bary.z < 0) continue;
             float z = az * bary.x + bz * bary.y + cz * bary.z;
             int idx = x + y * framebuffer.width();
-            if (z >= zbuffer[idx]) continue;
+			if (z < 0 || z >1) std::cout << "z value out of range: " << z << std::endl;
+            if (z > zbuffer[idx]) continue;
             zbuffer[idx] = z;
-            framebuffer.set(x, y, color);
+            //framebuffer.set(x, y, { static_cast<unsigned char>( z * 255 )
+            //                                }); // 灰度值
+
+            std::uint8_t gray = static_cast<std::uint8_t>(z * 255);
+            //std::cout << static_cast <int>(gray) << std::endl;
+            framebuffer.set(x, y, TGAColor{ gray, gray, gray, 255 });
+
+   //         unsigned char gray = static_cast<unsigned char>( 255);
+			//if (gray < 0 || gray >255) std::cout << "gray value out of range: " << static_cast<int>(gray) << std::endl;
+   //         framebuffer.set(x, y, { gray });
         }
     }
 }
@@ -145,7 +156,7 @@ void write_zbuffer_image(const std::vector<float>& zbuffer, int width, int heigh
     float range = zmax - zmin;
     if (range < 1e-5f) range = 1.0f;
 
-    TGAImage zimg(width, height, TGAImage::RGB);
+    TGAImage zimg(width, height, TGAImage::GRAYSCALE);
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
@@ -154,85 +165,13 @@ void write_zbuffer_image(const std::vector<float>& zbuffer, int width, int heigh
             int gray = static_cast<int>(znorm * 255);
             gray = std::clamp(gray, 0, 255);
             unsigned char g = static_cast<unsigned char>(gray);
-            zimg.set(x, y, { g, g, g, 255 });
+            zimg.set(x, y, { g });
+
         }
     }
     zimg.write_tga_file(filename.c_str());
 }
 
-
-/////////////////////
-//int main(int argc, char** argv) {
-//
-//    int width = 1080;
-//    int height = 720;
-//    TGAImage framebuffer(width, height, TGAImage::RGB);
-//    TGAImage zbuffer_tga(width, height, TGAImage::RGB);
-//    std::vector<float> zbuffer(width * height, 1.0);
-//
-//    Camera camera;
-//	camera.transform.position = { 0,0.5,1 }; // 相机位置
-//	camera.aspect_ratio = static_cast<float>(width) / height;
-//
-//    GameObject testObj;
-//    std::string path = R"(C:\Users\Y9000P\Desktop\WorkingSpace\tinyrenderer\obj\diablo3_pose\diablo3_pose.obj)";
-//    testObj.mesh.load_from_obj(path);
-//	testObj.transform.position = { 0, 0, 0 }; // 世界空间位置
-//	camera.transform.lookAt({ 0, 0, 0 }); // 面向原点 
-//    //float deg2rad = std::numbers::pi / 180.f;
-//    int num = 0;
-//
-//	double maxzz = std::numeric_limits<float>::lowest();
-//	double minzz = std::numeric_limits<float>::max();
-//
-//    for (auto &f : testObj.mesh.faces()) {
-//
-//		vec3 v0 = testObj.mesh.vertices()[f.v_idx[0]];
-//		vec3 v1 = testObj.mesh.vertices()[f.v_idx[1]];
-//		vec3 v2 = testObj.mesh.vertices()[f.v_idx[2]];
-//
-//        // MVP
-//		mat<4, 4> MVP = camera.ProjectMatrix() * camera.ViewMatrix() * testObj.transform.ModelMatrix();
-//		vec4 p0 = MVP * vec4{ v0.x, v0.y, v0.z, 1.0f };
-//		vec4 p1 = MVP * vec4{ v1.x, v1.y, v1.z, 1.0f };
-//		vec4 p2 = MVP * vec4{ v2.x, v2.y, v2.z, 1.0f };
-//
-//		vec3 ndc0 = vec3{ p0.x, p0.y, p0.z } / p0.w; // NDC
-//		vec3 ndc1 = vec3{ p1.x, p1.y, p1.z } / p1.w; // NDC
-//		vec3 ndc2 = vec3{ p2.x, p2.y, p2.z } / p2.w; // NDC
-//
-//  //      // 剔除ndcbox 之外的顶点
-//		if (ndc0.x < -1 || ndc0.x > 1 || ndc0.y < -1 || ndc0.y > 1 ||
-//			ndc1.x < -1 || ndc1.x > 1 || ndc1.y < -1 || ndc1.y > 1 ||
-//			ndc2.x < -1 || ndc2.x > 1 || ndc2.y < -1 || ndc2.y > 1) 
-//			continue; 
-//        
-//		vec3 sp0 = ndcToScreen(ndc0, width, height);
-//		vec3 sp1 = ndcToScreen(ndc1, width, height);
-//		vec3 sp2 = ndcToScreen(ndc2, width, height);
-//		maxzz = std::max(maxzz, std::max({ sp0.z, sp1.z, sp2.z }));
-//		minzz = std::min(minzz, std::min({ sp0.z, sp1.z, sp2.z }));
-//	    triangle(
-//			static_cast<int>(sp0.x), static_cast<int>(sp0.y), sp0.z,
-//			static_cast<int>(sp1.x), static_cast<int>(sp1.y), sp1.z,
-//			static_cast<int>(sp2.x), static_cast<int>(sp2.y), sp2.z,
-//            zbuffer,
-//			framebuffer,  
-//            randomPredefinedColor()),
-//		framebuffer.set(static_cast<int>(sp0.x), static_cast<int>(sp0.y), white);
-//		framebuffer.set(static_cast<int>(sp1.x), static_cast<int>(sp1.y), white);
-//		framebuffer.set(static_cast<int>(sp2.x), static_cast<int>(sp2.y), white);
-//    }
-//    //auto max_it = std::max_element(zbuffer.begin(), zbuffer.end());
-//    //auto min_it = std::min_element(zbuffer.begin(), zbuffer.end());
-//
-//    //std::cout << "max: " << *max_it << std::endl;
-//    //std::cout << "min: " << *min_it << std::endl;
-//	std::cout << "max z: " << maxzz << std::endl;
-//	std::cout << "min z: " << minzz << std::endl;
-//    framebuffer.write_tga_file("AAframeBuffer.tga");
-//	write_zbuffer_image(zbuffer, width, height, "zbuffer.tga");
-//};
 
 
 
@@ -240,11 +179,11 @@ int main(int argc, char** argv) {
 
     const int width = 1080;
     const int height = 720;
-    TGAImage framebuffer(width, height, TGAImage::RGB);
-    std::vector<float> zbuffer(width * height, std::numeric_limits<float>::max());
+    TGAImage framebuffer(width, height, TGAImage::RGBA);
+    std::vector<float> zbuffer(width * height, 1);
 
     Camera camera;
-    camera.transform.position = { 0, 0.5, 1 };
+    camera.transform.position = { 1, 1, 1 };
     camera.aspect_ratio = static_cast<float>(width) / height;
 
     GameObject testObj;
@@ -258,10 +197,10 @@ int main(int argc, char** argv) {
     mat<4, 4> P = camera.ProjectMatrix();
     mat<4, 4> MVP = P * V * M;
 
-    for (auto& f : testObj.mesh.faces()) {
-        vec3 v0 = testObj.mesh.vertices()[f.v_idx[0]];
-        vec3 v1 = testObj.mesh.vertices()[f.v_idx[1]];
-        vec3 v2 = testObj.mesh.vertices()[f.v_idx[2]];
+    for (int i = 0; i < testObj.mesh.nfaces(); i++) {
+		vec3 v0 = testObj.mesh.vert(i, 0);
+		vec3 v1 = testObj.mesh.vert(i, 1); 
+		vec3 v2 = testObj.mesh.vert(i, 2);
 
         vec4 p0_clip = MVP * vec4{ v0.x, v0.y, v0.z, 1.0f };
         vec4 p1_clip = MVP * vec4{ v1.x, v1.y, v1.z, 1.0f };
@@ -279,22 +218,18 @@ int main(int argc, char** argv) {
         vec3 sp0 = ndcToScreen(ndc0, width, height);
         vec3 sp1 = ndcToScreen(ndc1, width, height);
         vec3 sp2 = ndcToScreen(ndc2, width, height);
-
-        vec4 p0_view = V * M * vec4{ v0.x, v0.y, v0.z, 1.0f };
-        vec4 p1_view = V * M * vec4{ v1.x, v1.y, v1.z, 1.0f };
-        vec4 p2_view = V * M * vec4{ v2.x, v2.y, v2.z, 1.0f };
-
-        float z0_eye = -p0_view.z;
-        float z1_eye = -p1_view.z;
-        float z2_eye = -p2_view.z;
+        
+		//framebuffer.set(static_cast<int>(sp0.x), static_cast<int>(sp0.y), randomPredefinedColor());
+		//framebuffer.set(static_cast<int>(sp1.x), static_cast<int>(sp1.y), randomPredefinedColor());
+		//framebuffer.set(static_cast<int>(sp2.x), static_cast<int>(sp2.y), randomPredefinedColor());
 
         triangle(
-            static_cast<int>(sp0.x), static_cast<int>(sp0.y), z0_eye,
-            static_cast<int>(sp1.x), static_cast<int>(sp1.y), z1_eye,
-            static_cast<int>(sp2.x), static_cast<int>(sp2.y), z2_eye,
+            static_cast<int>(sp0.x), static_cast<int>(sp0.y), sp0.z,
+            static_cast<int>(sp1.x), static_cast<int>(sp1.y), sp1.z,
+            static_cast<int>(sp2.x), static_cast<int>(sp2.y), sp2.z,
             zbuffer,
             framebuffer,
-            randomPredefinedColor()
+            white
         );
     }
 

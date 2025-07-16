@@ -5,7 +5,10 @@ mat<4,4> Viewport;
 mat<4,4> Projection;
 
 void viewport(const int x, const int y, const int w, const int h) {
-    Viewport = {{{w/2., 0, 0, x+w/2.}, {0, h/2., 0, y+h/2.}, {0,0,1,0}, {0,0,0,1}}};
+    Viewport = {{{w/2., 0, 0, x+w/2.}, 
+                 {0, h/2., 0, y+h/2.}, 
+                 {0,   0,  1,   0   }, 
+                 {0,   0,  0,   1   }}};
 }
 
 void projection(const double f) { // check https://en.wikipedia.org/wiki/Camera_matrix
