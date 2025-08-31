@@ -30,6 +30,7 @@ struct TGAImage {
     enum Format { GRAYSCALE=1, RGB=3, RGBA=4 };
     TGAImage() = default;
     TGAImage(const int w, const int h, const int bpp);
+    TGAImage(uint32_t* framebuffer, const int w, const int h);
     bool  read_tga_file(const std::string filename);
     bool write_tga_file(const std::string filename, const bool vflip=true, const bool rle=true) const;
     void flip_horizontally();
@@ -38,6 +39,8 @@ struct TGAImage {
     void set(const int x, const int y, const TGAColor &c);
     int width()  const;
     int height() const;
+
+    void TGA2frameBuffer(uint32_t* framebuffer) const;
 private:
     bool   load_rle_data(std::ifstream &in);
     bool unload_rle_data(std::ofstream &out) const;

@@ -1,3 +1,4 @@
 framebuffer.tga
 .vscode/
-windowApp.h
+build/
+

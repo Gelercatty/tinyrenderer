@@ -3,7 +3,16 @@
 #include "tgaimage.h"
 
 TGAImage::TGAImage(const int w, const int h, const int bpp) : w(w), h(h), bpp(bpp), data(w*h*bpp, 0) {}
-
+TGAImage::TGAImage(uint32_t* framebuffer, const int w, const int h) : w(w), h(h), bpp(4), data(w*h*4, 0) {
+    for (int y=0; y<h; y++)
+        for (int x=0; x<w; x++) {
+            uint32_t color = framebuffer[(h-1-y)*w + x]; // OpenGL's origin is bottom-left
+            data[(x+y*w)*4 + 0] = (color >>  0) & 0xFF; // Blue
+            data[(x+y*w)*4 + 1] = (color >>  8) & 0xFF; // Green
+            data[(x+y*w)*4 + 2] = (color >> 16) & 0xFF; // Red
+            data[(x+y*w)*4 + 3] = (color >> 24) & 0xFF; // Alpha
+        }
+}
 bool TGAImage::read_tga_file(const std::string filename) {
     std::ifstream in;
     in.open(filename, std::ios::binary);
